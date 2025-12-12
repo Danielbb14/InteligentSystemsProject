@@ -1,0 +1,12 @@
+opencv-python
+torch
+torchvision
+Pillow
+numpy
+timm
+google-generativeai
+furhat-remote-api
+python-dotenv
+fastapi
+uvicorn
+python-multipart
