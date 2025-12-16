@@ -37,7 +37,7 @@ class EmotionDetector:
     def __init__(self, model_path):
         # *** STABILITY FIX: FORCE CPU ***
         # This bypasses the persistent PyTorch/MPS loading error on your system.
-        self.device = torch.device("mps") 
+        self.device = torch.device("cpu") 
         print(f"Using device: {self.device} (Forced for loading stability)")
 
         num_classes = len(EMOTION_LABELS)  
@@ -47,7 +47,7 @@ class EmotionDetector:
         # *** The Loading Block ***
         try:
             # Load state dict onto CPU (most compatible method)
-            state_dict = torch.load(model_path, map_location='mps') 
+            state_dict = torch.load(model_path, map_location='cpu') 
             self.model.load_state_dict(state_dict)
             print(f"Model state loaded onto CPU successfully.")
         except Exception as e:

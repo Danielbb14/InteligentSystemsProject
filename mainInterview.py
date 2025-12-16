@@ -12,7 +12,7 @@ FURHAT_IP = "localhost"
 GEMINI_API_KEY = os.getenv("API_KEY")
 QUESTIONS_TO_ASK = 5
 
-USE_KEYBOARD = False 
+USE_KEYBOARD = True
 
 # --- MOOD CLASSIFIER CONFIGURATION ---
 # >>> SET THIS TO FALSE TO DISABLE THE API CALLS <<<
@@ -26,7 +26,7 @@ furhat = FurhatRemoteAPI(FURHAT_IP)
 
 SYSTEM_INSTRUCTION = """
 You are an empathetic, multimodal study assistant built for the Furhat robot. 
-Your role is to listen attentively to the student’s academic questions and struggles, and provide clear, supportive guidance. 
+Your role is to listen attentively to the student's academic questions and struggles, and provide clear, supportive guidance. 
 Focus on helping the student solve problems and understand concepts. 
 Keep responses concise, conversational, and emotionally aware, staying strictly on-topic.
 """
@@ -44,7 +44,13 @@ model = genai.GenerativeModel(
     system_instruction=SYSTEM_INSTRUCTION
 )
 
+gesture_model = genai.GenerativeModel(
+    model_name="gemini-2.5-flash",
+    system_instruction="You are a gesture selection AI for the Furhat robot. Based on the user's emotional state and the context of the conversation, you will suggest the most appropriate gesture from the available list. Respond with only the name of the gesture."
+)
+
 chat_session = model.start_chat(history=[])
+gesture_session = gesture_model.start_chat(history=[])
 
 # --- HELPER FUNCTIONS ---
 
@@ -114,9 +120,33 @@ def get_user_input():
 
 def robot_gesture(name):
     try:
-        furhat.gesture(name=name, blocking=False)
+        print(f"[🤖 Robot performs gesture]: {name}")
+        furhat.gesture(name=name, blocking=True)
     except Exception:
         print(f"Gesture {name} not found.")
+
+# choose the most fitting gesture for the current situation and the robots answer
+# we use a seperate LLM session for gestures to keep the context isolated
+def choose_gesture(prompt, response):
+    prompt_lower = prompt.lower()
+    response_lower = response.lower()
+    available_gestures = furhat.get_gestures()
+    
+    # Extract just the gesture names from the list of Gesture objects
+    gesture_names = [g.name for g in available_gestures]
+
+    gesture_prompt = (
+        f"The LLM was prompted with: '{prompt_lower}'\n"
+        f"The robot will respond with: '{response_lower}'\n"
+        f"Based on the user's emotional state and the context of the conversation, suggest the most appropriate gesture from the following list: {gesture_names}.\n"
+        f"Respond with only the name of the gesture."
+    )
+    response = gesture_session.send_message(gesture_prompt)
+    gesture_name = response.text.strip()
+    if gesture_name not in gesture_names:
+        print(f"Suggested gesture '{gesture_name}' not in available gestures. Using default.")
+        gesture_name = "Nod" # Default gesture if the suggested one is not available
+    return gesture_name
 
 # --- MAIN FLOW ---
 
@@ -146,6 +176,7 @@ def run_interview():
     
     print("[🧠] Thinking...")
     response = chat_session.send_message(initial_prompt)
+    rich_next_prompt = initial_prompt  # Initialize for the loop
     ai_text = response.text
 
     # 3. INTERVIEW LOOP
@@ -153,7 +184,8 @@ def run_interview():
         print(f"\n--- Question {i+1} of {QUESTIONS_TO_ASK} ---")
         
         # Robot speaks AI response
-        robot_gesture("Nod")
+        gesture = choose_gesture(rich_next_prompt, ai_text)
+        robot_gesture(gesture)
         robot_say(ai_text)
         
         # Get input
