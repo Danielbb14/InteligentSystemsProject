@@ -8,15 +8,15 @@ import requests
 # --- CONFIGURATION ---
 load_dotenv() 
 
-FURHAT_IP = "localhost"
+FURHAT_IP = "192.168.1.107"
 GEMINI_API_KEY = os.getenv("API_KEY")
 QUESTIONS_TO_ASK = 5
 
-USE_KEYBOARD = True
+USE_KEYBOARD = False
 
 # --- MOOD CLASSIFIER CONFIGURATION ---
 # >>> SET THIS TO FALSE TO DISABLE THE API CALLS <<<
-MOOD_CLASSIFIER_ENABLED = True 
+MOOD_CLASSIFIER_ENABLED = True
 HARDCODED_MOOD = 'neutral' # Default mood when disabled or API fails
 MOOD_API_URL = "http://127.0.0.1:8000/mood" 
 
